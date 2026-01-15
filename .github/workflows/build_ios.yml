@@ -23,22 +23,28 @@ jobs:
           rm -rf ios
           flutter create . --platforms=ios
           cd ios
-          # Crea un Podfile pulito e compatibile con iOS 15.0
-          echo "platform :ios, '15.0'" > Podfile
-          echo "use_frameworks!" >> Podfile
-          echo "target 'Runner' do" >> Podfile
-          echo "  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))" >> Podfile
-          echo "end" >> Podfile
+          # Crea un Podfile corretto includendo il riferimento agli script di Flutter
+          cat <<EOF > Podfile
+          platform :ios, '15.0'
+          
+          # Carica gli script di Flutter necessari per CocoaPods
+          flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+          
+          target 'Runner' do
+            use_frameworks!
+            use_modular_headers!
+          end
+          EOF
 
       - name: Build IPA
         run: |
           # Forza il target 15.0 nel progetto Xcode
           sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = .*/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/Runner.xcodeproj/project.pbxproj
           
-          # Build Release
+          # Compilazione
           flutter build ios --release --no-codesign
           
-          # Impacchettamento IPA
+          # Creazione IPA
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r app.ipa Payload

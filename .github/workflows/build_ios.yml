@@ -18,26 +18,28 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Create and Configure Podfile
+      - name: Setup iOS Project
         run: |
+          # Crea la cartella ios se non esiste e genera i file base
+          flutter create . --platforms=ios
           cd ios
-          # Se il Podfile non esiste, lo genera Flutter
-          flutter precache --ios
+          # Genera il Podfile se manca
           if [ ! -f "Podfile" ]; then
             pod init
           fi
-          # Forza la versione minima a 15.0 per Firebase
+          # Imposta iOS 15.0 nel Podfile per Firebase
           sed -i '' "s/# platform :ios, '9.0'/platform :ios, '15.0'/" Podfile
           sed -i '' "s/platform :ios, '.*'/platform :ios, '15.0'/" Podfile
 
       - name: Build IPA
         run: |
-          # Forza il target anche nel file di progetto Xcode
+          # Forza il target 15.0 anche nel progetto Xcode
           sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = .*/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/Runner.xcodeproj/project.pbxproj
           
+          # Costruisce l'app (senza firma digitale, la metteremo con Sideloadly)
           flutter build ios --release --no-codesign
           
-          # Crea il pacchetto .ipa manuale
+          # Impacchetta il file .ipa
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r app.ipa Payload

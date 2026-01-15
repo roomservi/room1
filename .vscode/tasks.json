@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Add firebase_database to pubspec.yaml and get packages",
+			"type": "shell",
+			"command": "flutter pub add firebase_database && flutter pub get",
+			"args": [],
+			"isBackground": false,
+			"group": "build"
+		}
+	]
+}

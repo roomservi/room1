@@ -1,0 +1,6 @@
+# NFC mapping file
+# Format: <nfc_code>=<user_identifier_or_password>
+# Lines starting with # are comments and will be ignored.
+
+roomone/nfc/00000=utente_00000_password
+roomone/nfc/94738=utente_94738_password

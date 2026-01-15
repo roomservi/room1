@@ -18,33 +18,26 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Setup iOS Configuration
+      - name: Setup iOS Project
         run: |
+          # Cancella la cartella ios e la ricrea da zero in modo "pulito"
           rm -rf ios
           flutter create . --platforms=ios
+          
+          # Entra nella cartella ios e modifica il Podfile appena creato da Flutter
           cd ios
-          # Crea un Podfile corretto includendo il riferimento agli script di Flutter
-          cat <<EOF > Podfile
-          platform :ios, '15.0'
-          
-          # Carica gli script di Flutter necessari per CocoaPods
-          flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-          
-          target 'Runner' do
-            use_frameworks!
-            use_modular_headers!
-          end
-          EOF
+          sed -i '' "s/# platform :ios, '9.0'/platform :ios, '15.0'/" Podfile
+          sed -i '' "s/platform :ios, '.*'/platform :ios, '15.0'/" Podfile
 
       - name: Build IPA
         run: |
-          # Forza il target 15.0 nel progetto Xcode
+          # Forza il target 15.0 anche nel file di progetto Xcode
           sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = .*/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/Runner.xcodeproj/project.pbxproj
           
-          # Compilazione
+          # Costruzione dell'app
           flutter build ios --release --no-codesign
           
-          # Creazione IPA
+          # Creazione manuale del pacchetto IPA
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r app.ipa Payload

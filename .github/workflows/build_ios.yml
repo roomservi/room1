@@ -20,28 +20,25 @@ jobs:
 
       - name: Setup iOS Configuration
         run: |
-          # Rimuove eventuali configurazioni vecchie e rigenera la cartella ios
           rm -rf ios
           flutter create . --platforms=ios
-          
           cd ios
-          # Crea un Podfile da zero con la versione corretta
+          # Crea un Podfile pulito e compatibile con iOS 15.0
           echo "platform :ios, '15.0'" > Podfile
           echo "use_frameworks!" >> Podfile
           echo "target 'Runner' do" >> Podfile
-          echo "  use_retina_simulator_kernels" >> Podfile
           echo "  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))" >> Podfile
           echo "end" >> Podfile
 
       - name: Build IPA
         run: |
-          # Forza il target 15.0 nel file di progetto Xcode
+          # Forza il target 15.0 nel progetto Xcode
           sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = .*/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/Runner.xcodeproj/project.pbxproj
           
-          # Costruzione effettiva
+          # Build Release
           flutter build ios --release --no-codesign
           
-          # Creazione manuale del pacchetto IPA
+          # Impacchettamento IPA
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r app.ipa Payload

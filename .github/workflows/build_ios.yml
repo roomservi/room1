@@ -1,5 +1,4 @@
 name: Flutter iOS Build
-
 on:
   push:
     branches:
@@ -8,25 +7,42 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
-
-      - name: Install dependencies
+          channel: 'stable'
+          
+      - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build iOS (no codesign)
-        run: flutter build ios --release --no-codesign
-
-      - name: Create IPA
+      - name: Setup iOS Configuration
         run: |
-          mkdir Payload
+          # Rimuove eventuali configurazioni vecchie e rigenera la cartella ios
+          rm -rf ios
+          flutter create . --platforms=ios
+          
+          cd ios
+          # Crea un Podfile da zero con la versione corretta
+          echo "platform :ios, '15.0'" > Podfile
+          echo "use_frameworks!" >> Podfile
+          echo "target 'Runner' do" >> Podfile
+          echo "  use_retina_simulator_kernels" >> Podfile
+          echo "  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))" >> Podfile
+          echo "end" >> Podfile
+
+      - name: Build IPA
+        run: |
+          # Forza il target 15.0 nel file di progetto Xcode
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = .*/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/Runner.xcodeproj/project.pbxproj
+          
+          # Costruzione effettiva
+          flutter build ios --release --no-codesign
+          
+          # Creazione manuale del pacchetto IPA
+          mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r app.ipa Payload
 

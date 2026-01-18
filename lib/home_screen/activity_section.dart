@@ -176,375 +176,405 @@ class _ActivitySectionState extends State<ActivitySection> {
       return const SizedBox.shrink();
     }
 
-    final bottomPadding = MediaQuery.of(context).padding.bottom + 54;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Usa lo spazio disponibile senza sottrarre per la nav bar
+        // La dashboard gestisce il padding inferiore
+        final maxHeight = constraints.maxHeight;
 
-    return FutureBuilder<Map<String, dynamic>>(
-      future: fetchUserActivities(widget.username!),
-      builder: (context, snapshot) {
-        final activities = snapshot.data ?? {};
-        final keys = activities.keys.toList()..sort((a, b) => b.compareTo(a));
-        // show only the first 5 activities
-        final displayKeys = keys.take(5).toList();
+        return FutureBuilder<Map<String, dynamic>>(
+          future: fetchUserActivities(widget.username!),
+          builder: (context, snapshot) {
+            final activities = snapshot.data ?? {};
+            final keys =
+                activities.keys.toList()..sort((a, b) => b.compareTo(a));
+            // show only the first 5 activities
+            final displayKeys = keys.take(5).toList();
 
-        // If there are more than 5 activities, trim on the server (best-effort)
-        if (keys.length > 5 &&
-            widget.username != null &&
-            !_trimmedUsers.contains(widget.username)) {
-          _trimmedUsers.add(widget.username!);
-          // perform trimming asynchronously and don't block the UI
-          trimUserActivities(widget.username!, 5).catchError((e) {
-            debugPrint('Failed to trim activities for ${widget.username}: $e');
-          });
-        }
+            // If there are more than 5 activities, trim on the server (best-effort)
+            if (keys.length > 5 &&
+                widget.username != null &&
+                !_trimmedUsers.contains(widget.username)) {
+              _trimmedUsers.add(widget.username!);
+              // perform trimming asynchronously and don't block the UI
+              trimUserActivities(widget.username!, 5).catchError((e) {
+                debugPrint(
+                  'Failed to trim activities for ${widget.username}: $e',
+                );
+              });
+            }
 
-        if (keys.isEmpty) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18.0),
-            child: Text(
-              'Nessuna attività recente',
-              style: TextStyle(
-                color:
-                    widget.isDark
-                        ? CupertinoColors.white
-                        : CupertinoColors.black,
-              ),
-            ),
-          );
-        }
+            if (keys.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18.0),
+                child: Text(
+                  'Nessuna attività recente',
+                  style: TextStyle(
+                    color:
+                        widget.isDark
+                            ? CupertinoColors.white
+                            : CupertinoColors.black,
+                  ),
+                ),
+              );
+            }
 
-        return Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(bottom: bottomPadding),
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) {
-                  setState(() => _selectedIdx = index);
-                },
-                scrollDirection: Axis.vertical,
-                itemCount: displayKeys.length,
-                itemBuilder: (context, index) {
-                  final activity = activities[displayKeys[index]];
-                  final type = activity['type'] ?? '';
-                  final amount = activity['amount']?.toString() ?? '';
-                  final dateStr = activity['date'] ?? '';
-                  final level = activity['level'] ?? '';
+            return Stack(
+              children: [
+                // Container con altezza massima definita
+                SizedBox(
+                  height: maxHeight,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() => _selectedIdx = index);
+                    },
+                    scrollDirection: Axis.vertical,
+                    itemCount: displayKeys.length,
+                    itemBuilder: (context, index) {
+                      final activity = activities[displayKeys[index]];
+                      final type = activity['type'] ?? '';
+                      final amount = activity['amount']?.toString() ?? '';
+                      final dateStr = activity['date'] ?? '';
+                      final level = activity['level'] ?? '';
 
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    child: SizedBox(
-                      height: _notificationHeight,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Stack(
-                          children: [
-                            if (type == 'subscription')
-                              Positioned.fill(
-                                child: ImageFiltered(
-                                  imageFilter: ImageFilter.blur(
-                                    sigmaX: 6,
-                                    sigmaY: 6,
-                                  ),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: _subscriptionGradient(level),
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        child: SizedBox(
+                          height: _notificationHeight,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Stack(
+                              children: [
+                                if (type == 'subscription')
+                                  Positioned.fill(
+                                    child: ImageFiltered(
+                                      imageFilter: ImageFilter.blur(
+                                        sigmaX: 6,
+                                        sigmaY: 6,
+                                      ),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: _subscriptionGradient(
+                                            level,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Positioned.fill(
+                                    child: Container(
+                                      color:
+                                          widget.isDark
+                                              ? Colors.black.withOpacity(0.12)
+                                              : Colors.white.withOpacity(0.02),
                                     ),
                                   ),
-                                ),
-                              )
-                            else
-                              Positioned.fill(
-                                child: Container(
-                                  color:
-                                      widget.isDark
-                                          ? Colors.black.withOpacity(0.12)
-                                          : Colors.white.withOpacity(0.02),
-                                ),
-                              ),
-                            Positioned.fill(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 12,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Builder(
-                                      builder: (context) {
-                                        final from =
-                                            activity['from'] as String?;
-                                        final to = activity['to'] as String?;
-                                        final actor =
-                                            (from != null && from.isNotEmpty)
-                                                ? from
-                                                : (to != null && to.isNotEmpty)
-                                                ? to
-                                                : null;
-                                        if (actor != null) {
-                                          return Column(
+                                Positioned.fill(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 12,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Builder(
+                                          builder: (context) {
+                                            final from =
+                                                activity['from'] as String?;
+                                            final to =
+                                                activity['to'] as String?;
+                                            final actor =
+                                                (from != null &&
+                                                        from.isNotEmpty)
+                                                    ? from
+                                                    : (to != null &&
+                                                        to.isNotEmpty)
+                                                    ? to
+                                                    : null;
+                                            if (actor != null) {
+                                              return Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Container(
+                                                    width: 48,
+                                                    height: 48,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                        color: Colors.white24,
+                                                        width: 1,
+                                                      ),
+                                                    ),
+                                                    child: ClipRRect(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            48,
+                                                          ),
+                                                      child: Image.asset(
+                                                        getProfileImage(actor),
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder:
+                                                            (
+                                                              ctx,
+                                                              err,
+                                                              stack,
+                                                            ) => Icon(
+                                                              _getActivityIcon(
+                                                                activity,
+                                                              ),
+                                                              color:
+                                                                  _getActivityColor(
+                                                                    activity,
+                                                                  ),
+                                                              size: 22,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 6.0),
+                                                  const Icon(
+                                                    CupertinoIcons.clock,
+                                                    size: 12,
+                                                    color: Colors.white70,
+                                                  ),
+                                                ],
+                                              );
+                                            }
+
+                                            // fallback to icon if no actor
+                                            return Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Container(
+                                                  width: 40,
+                                                  height: 40,
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: Colors.white
+                                                        .withOpacity(0.06),
+                                                  ),
+                                                  child: Icon(
+                                                    _getActivityIcon(activity),
+                                                    color: _getActivityColor(
+                                                      activity,
+                                                    ),
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                const Icon(
+                                                  CupertinoIcons.clock,
+                                                  size: 12,
+                                                  color: Colors.white70,
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             mainAxisAlignment:
                                                 MainAxisAlignment.center,
                                             children: [
-                                              Container(
-                                                width: 48,
-                                                height: 48,
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: Colors.white24,
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                child: ClipRRect(
-                                                  borderRadius:
-                                                      BorderRadius.circular(48),
-                                                  child: Image.asset(
-                                                    getProfileImage(actor),
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder:
-                                                        (
-                                                          ctx,
-                                                          err,
-                                                          stack,
-                                                        ) => Icon(
-                                                          _getActivityIcon(
-                                                            activity,
-                                                          ),
-                                                          color:
-                                                              _getActivityColor(
-                                                                activity,
-                                                              ),
-                                                          size: 22,
-                                                        ),
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(height: 6.0),
-                                              const Icon(
-                                                CupertinoIcons.clock,
-                                                size: 12,
-                                                color: Colors.white70,
-                                              ),
-                                            ],
-                                          );
-                                        }
-
-                                        // fallback to icon if no actor
-                                        return Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Container(
-                                              width: 40,
-                                              height: 40,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: Colors.white.withOpacity(
-                                                  0.06,
-                                                ),
-                                              ),
-                                              child: Icon(
-                                                _getActivityIcon(activity),
-                                                color: _getActivityColor(
-                                                  activity,
-                                                ),
-                                                size: 20,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            const Icon(
-                                              CupertinoIcons.clock,
-                                              size: 12,
-                                              color: Colors.white70,
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          if ((type == 'payment' ||
-                                                  type == 'transfer' ||
-                                                  type == 'reward') &&
-                                              amount.isNotEmpty)
-                                            Text(
-                                              'S$amount',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontSize: 26,
-                                                fontWeight: FontWeight.w900,
-                                                color:
-                                                    widget.isDark
-                                                        ? Colors.white
-                                                        : const Color(
-                                                          0xFF111111,
-                                                        ),
-                                                shadows: [
-                                                  const Shadow(
-                                                    color: Colors.black45,
-                                                    offset: Offset(0, 1),
-                                                    blurRadius: 4,
-                                                  ),
-                                                ],
-                                              ),
-                                            )
-                                          else
-                                            Builder(
-                                              builder: (_) {
-                                                final from =
-                                                    activity['from'] as String?;
-                                                final to =
-                                                    activity['to'] as String?;
-                                                final actor =
-                                                    (from != null &&
-                                                            from.isNotEmpty)
-                                                        ? from
-                                                        : (to != null &&
-                                                            to.isNotEmpty)
-                                                        ? to
-                                                        : null;
-                                                final title =
-                                                    actor != null
-                                                        ? getDisplayName(actor)
-                                                        : (activity['level'] ??
-                                                            '');
-                                                return Text(
-                                                  title,
-                                                  style: TextStyle(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w700,
-                                                    color:
-                                                        widget.isDark
-                                                            ? CupertinoColors
-                                                                .white
-                                                            : const Color(
-                                                              0xFF1C1C1E,
-                                                            ),
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            _activityDescription(activity),
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color:
-                                                  widget.isDark
-                                                      ? const Color(0xFFE5E5EA)
-                                                      : const Color(0xFF3A3A3C),
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  _formatDateString(dateStr),
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color:
-                                                        widget.isDark
-                                                            ? const Color(
-                                                              0xFF8E8E93,
-                                                            )
-                                                            : const Color(
-                                                              0xFF8E8E93,
-                                                            ),
-                                                  ),
+                                              if ((type == 'payment' ||
+                                                      type == 'transfer' ||
+                                                      type == 'reward') &&
+                                                  amount.isNotEmpty)
+                                                Text(
+                                                  'S$amount',
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 26,
+                                                    fontWeight: FontWeight.w900,
+                                                    color:
+                                                        widget.isDark
+                                                            ? Colors.white
+                                                            : const Color(
+                                                              0xFF111111,
+                                                            ),
+                                                    shadows: [
+                                                      const Shadow(
+                                                        color: Colors.black45,
+                                                        offset: Offset(0, 1),
+                                                        blurRadius: 4,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                )
+                                              else
+                                                Builder(
+                                                  builder: (_) {
+                                                    final from =
+                                                        activity['from']
+                                                            as String?;
+                                                    final to =
+                                                        activity['to']
+                                                            as String?;
+                                                    final actor =
+                                                        (from != null &&
+                                                                from.isNotEmpty)
+                                                            ? from
+                                                            : (to != null &&
+                                                                to.isNotEmpty)
+                                                            ? to
+                                                            : null;
+                                                    final title =
+                                                        actor != null
+                                                            ? getDisplayName(
+                                                              actor,
+                                                            )
+                                                            : (activity['level'] ??
+                                                                '');
+                                                    return Text(
+                                                      title,
+                                                      style: TextStyle(
+                                                        fontSize: 16,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color:
+                                                            widget.isDark
+                                                                ? CupertinoColors
+                                                                    .white
+                                                                : const Color(
+                                                                  0xFF1C1C1E,
+                                                                ),
+                                                      ),
+                                                    );
+                                                  },
                                                 ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                width: 6,
-                                                height: 6,
-                                                decoration: BoxDecoration(
-                                                  color:
-                                                      widget.isDark
-                                                          ? Colors.white12
-                                                          : Colors.black12,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
+                                              const SizedBox(height: 6),
                                               Text(
-                                                type
-                                                    .toString()
-                                                    .replaceAll('_', ' ')
-                                                    .toUpperCase(),
+                                                _activityDescription(activity),
                                                 style: TextStyle(
-                                                  fontSize: 12,
+                                                  fontSize: 14,
                                                   color:
                                                       widget.isDark
                                                           ? const Color(
-                                                            0xFF8E8E93,
+                                                            0xFFE5E5EA,
                                                           )
                                                           : const Color(
-                                                            0xFF8E8E93,
+                                                            0xFF3A3A3C,
                                                           ),
                                                 ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      _formatDateString(
+                                                        dateStr,
+                                                      ),
+                                                      style: TextStyle(
+                                                        fontSize: 12,
+                                                        color:
+                                                            widget.isDark
+                                                                ? const Color(
+                                                                  0xFF8E8E93,
+                                                                )
+                                                                : const Color(
+                                                                  0xFF8E8E93,
+                                                                ),
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Container(
+                                                    width: 6,
+                                                    height: 6,
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          widget.isDark
+                                                              ? Colors.white12
+                                                              : Colors.black12,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    type
+                                                        .toString()
+                                                        .replaceAll('_', ' ')
+                                                        .toUpperCase(),
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color:
+                                                          widget.isDark
+                                                              ? const Color(
+                                                                0xFF8E8E93,
+                                                              )
+                                                              : const Color(
+                                                                0xFF8E8E93,
+                                                              ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            if (keys.length > 1)
-              Positioned(
-                top: 0,
-                bottom: bottomPadding,
-                right: 20,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(
-                      keys.length,
-                      (index) => Container(
-                        margin: const EdgeInsets.symmetric(vertical: 2),
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color:
-                              _selectedIdx == index
-                                  ? CupertinoColors.systemBlue
-                                  : widget.isDark
-                                  ? const Color(0xFF48484A).withOpacity(0.6)
-                                  : const Color(0xFFD1D1D6).withOpacity(0.6),
+                      );
+                    },
+                  ),
+                ),
+                if (keys.length > 1)
+                  Positioned(
+                    top: 0,
+                    bottom: 0,
+                    right: 20,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(
+                          keys.length,
+                          (index) => Container(
+                            margin: const EdgeInsets.symmetric(vertical: 2),
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color:
+                                  _selectedIdx == index
+                                      ? CupertinoColors.systemBlue
+                                      : widget.isDark
+                                      ? const Color(0xFF48484A).withOpacity(0.6)
+                                      : const Color(
+                                        0xFFD1D1D6,
+                                      ).withOpacity(0.6),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ),
-          ],
+              ],
+            );
+          },
         );
       },
     );

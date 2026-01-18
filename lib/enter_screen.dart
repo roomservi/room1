@@ -34,9 +34,11 @@ class _EnterScreenState extends State<EnterScreen> {
   }
 
   void _goToHome() {
-    Navigator.of(
-      context,
-    ).pushReplacement(CupertinoPageRoute(builder: (_) => const HomeScreen()));
+    // Ricarica l'intera app per forzare il check dell'onboarding
+    Navigator.of(context).pushAndRemoveUntil(
+      CupertinoPageRoute(builder: (_) => const OnePayApp()),
+      (route) => false,
+    );
   }
 
   Future<void> _login() async {
@@ -221,19 +223,6 @@ class _EnterScreenState extends State<EnterScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-// Placeholder HomeScreen (da sostituire con la tua schermata home vera)
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return const CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(middle: Text('Home')),
-      child: Center(child: Text('Benvenuto!')),
     );
   }
 }

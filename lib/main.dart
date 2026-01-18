@@ -4,12 +4,14 @@ import 'package:flutter/material.dart' show ChangeNotifier, ThemeMode;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'enter_screen.dart';
+import 'onboarding_screen.dart';
 import 'navigation_bar.dart';
 import 'library.dart';
 import 'video_controller_provider.dart';
 import 'screen_manager.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:device_preview/device_preview.dart';
 
 // (navigatorKey removed with NFC service)
 
@@ -17,12 +19,18 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider<ThemeNotifier>(create: (_) => ThemeNotifier()),
-        ChangeNotifierProvider(create: (_) => VideoControllerProvider()),
-      ],
-      child: const OnePayApp(),
+    DevicePreview(
+      enabled: !kReleaseMode,
+      builder:
+          (context) => MultiProvider(
+            providers: [
+              ChangeNotifierProvider<ThemeNotifier>(
+                create: (_) => ThemeNotifier(),
+              ),
+              ChangeNotifierProvider(create: (_) => VideoControllerProvider()),
+            ],
+            child: const OnePayApp(),
+          ),
     ),
   );
 }
@@ -103,6 +111,7 @@ class _RootRouter extends StatefulWidget {
 
 class _RootRouterState extends State<_RootRouter> {
   bool? _loggedIn;
+  bool? _showOnboarding;
 
   @override
   void initState() {
@@ -118,8 +127,16 @@ class _RootRouterState extends State<_RootRouter> {
 
   Future<void> _checkLogin() async {
     final logged = await isLoggedIn();
+    bool shouldShowOnboarding = false;
+
+    if (logged) {
+      final prefs = await SharedPreferences.getInstance();
+      shouldShowOnboarding = !(prefs.getBool('onboardingCompleted') ?? false);
+    }
+
     setState(() {
       _loggedIn = logged;
+      _showOnboarding = shouldShowOnboarding;
     });
   }
 
@@ -132,6 +149,15 @@ class _RootRouterState extends State<_RootRouter> {
     }
     if (_loggedIn == false) {
       return const EnterScreen();
+    }
+    if (_showOnboarding == true) {
+      return OnboardingScreen(
+        onComplete: () {
+          setState(() {
+            _showOnboarding = false;
+          });
+        },
+      );
     }
     return const CustomNavigationBar();
   }

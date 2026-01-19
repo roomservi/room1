@@ -13,6 +13,7 @@ import 'nfc_config.dart';
 /// );
 class NFCReader {
   static bool _listening = false;
+  static bool _pluginAvailable = true;
 
   /// Start listening for NFC tags. Calls `onMatch` when a code matches the mapping,
   /// otherwise calls `onNoMatch` with an explanatory message.
@@ -21,6 +22,15 @@ class NFCReader {
     required void Function(String message) onNoMatch,
   }) async {
     if (_listening) return;
+
+    // If plugin already failed, don't try again
+    if (!_pluginAvailable) {
+      onNoMatch(
+        'NFC plugin not available on this device. Please rebuild the app or ensure NFC is properly configured.',
+      );
+      return;
+    }
+
     _listening = true;
 
     // Ensure mapping is loaded
@@ -100,7 +110,17 @@ class NFCReader {
         alertMessage: 'Hold your NFC card near the device',
       );
     } catch (e) {
-      onNoMatch('Error starting NFC session: $e');
+      debugPrint('Error starting NFC session: $e');
+
+      // Check if it's a MissingPluginException
+      if (e.toString().contains('MissingPluginException')) {
+        _pluginAvailable = false;
+        onNoMatch(
+          'NFC plugin non è installato correttamente. Ricompila il progetto con: flutter clean && flutter pub get && flutter run',
+        );
+      } else {
+        onNoMatch('Error starting NFC session: $e');
+      }
       _listening = false;
     }
   }

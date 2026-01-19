@@ -438,22 +438,99 @@ class _HomeScreenState extends State<HomeScreen> {
                           color:
                               isDark
                                   ? const Color(0xFF23232B).withOpacity(0.85)
-                                  : CupertinoColors.systemGrey5,
-                          borderRadius: BorderRadius.circular(16),
+                                  : CupertinoColors.systemGrey6,
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        child: CupertinoButton(
-                          padding: const EdgeInsets.all(6),
-                          minSize: 36,
-                          child: Icon(
-                            isDark
-                                ? CupertinoIcons.moon_fill
-                                : CupertinoIcons.sun_max_fill,
-                            color:
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Pulsante NFC a sinistra
+                            CupertinoButton(
+                              padding: const EdgeInsets.all(6),
+                              minSize: 36,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    CupertinoIcons.creditcard,
+                                    color: CupertinoColors.systemBlue,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Icon(
+                                    CupertinoIcons.wifi,
+                                    color: CupertinoColors.systemBlue,
+                                    size: 8,
+                                  ),
+                                ],
+                              ),
+                              onPressed: () {
+                                // Attiva la scansione NFC manuale
+                                NFCReader.stopListening();
+                                NFCReader.startListening(
+                                  onMatch: (code, value) async {
+                                    final payload = value ?? '';
+                                    String usernameFromMap = '';
+                                    if (payload.contains('roomone')) {
+                                      final logged = await getLoggedUser();
+                                      usernameFromMap = logged ?? '';
+                                    } else {
+                                      usernameFromMap =
+                                          users.entries
+                                              .firstWhere(
+                                                (e) => e.value == payload,
+                                                orElse:
+                                                    () => MapEntry(
+                                                      payload,
+                                                      payload,
+                                                    ),
+                                              )
+                                              .key;
+                                    }
+                                    final password = payload;
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                          if (!mounted) return;
+                                          try {
+                                            NFCReader.stopListening();
+                                          } catch (_) {}
+                                          try {
+                                            NfcWindow.show(
+                                              context,
+                                              username: usernameFromMap,
+                                              isDark: isDark,
+                                              cardCode: code,
+                                              password: password,
+                                            );
+                                          } catch (e) {
+                                            debugPrint(
+                                              'Error showing NfcWindow: $e',
+                                            );
+                                          }
+                                        });
+                                  },
+                                  onNoMatch: (String reason) {
+                                    debugPrint('No NFC match found: $reason');
+                                  },
+                                );
+                              },
+                            ),
+                            // Pulsante Tema a destra
+                            CupertinoButton(
+                              padding: const EdgeInsets.all(6),
+                              minSize: 36,
+                              child: Icon(
                                 isDark
-                                    ? CupertinoColors.systemYellow
-                                    : CupertinoColors.activeBlue,
-                          ),
-                          onPressed: () => themeNotifier.toggleTheme(),
+                                    ? CupertinoIcons.moon_fill
+                                    : CupertinoIcons.sun_max_fill,
+                                color:
+                                    isDark
+                                        ? CupertinoColors.systemYellow
+                                        : CupertinoColors.activeBlue,
+                              ),
+                              onPressed: () => themeNotifier.toggleTheme(),
+                            ),
+                          ],
                         ),
                       ),
                     ],

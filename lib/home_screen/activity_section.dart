@@ -22,7 +22,7 @@ class ActivitySection extends StatefulWidget {
 }
 
 class _ActivitySectionState extends State<ActivitySection> {
-  final _notificationHeight = 110.0;
+  final _notificationHeight = 140.0;
   int _selectedIdx = 0;
   late PageController _pageController;
   final Set<String> _trimmedUsers =
@@ -178,9 +178,10 @@ class _ActivitySectionState extends State<ActivitySection> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Usa lo spazio disponibile senza sottrarre per la nav bar
-        // La dashboard gestisce il padding inferiore
-        final maxHeight = constraints.maxHeight;
+        // Sottrai solo lo spazio strettamente necessario per la nav bar
+        // Lascia più spazio per le attività
+        const navigationBarHeight = 70.0;
+        final maxHeight = constraints.maxHeight - navigationBarHeight;
 
         return FutureBuilder<Map<String, dynamic>>(
           future: fetchUserActivities(widget.username!),
@@ -222,16 +223,18 @@ class _ActivitySectionState extends State<ActivitySection> {
             return Stack(
               children: [
                 // Container con altezza massima definita
-                SizedBox(
-                  height: maxHeight,
-                  child: PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      setState(() => _selectedIdx = index);
-                    },
-                    scrollDirection: Axis.vertical,
-                    itemCount: displayKeys.length,
-                    itemBuilder: (context, index) {
+                Padding(
+                  padding: const EdgeInsets.only(top: 24.0, bottom: 24.0),
+                  child: SizedBox(
+                    height: maxHeight,
+                    child: PageView.builder(
+                        controller: _pageController,
+                        scrollDirection: Axis.vertical,
+                        onPageChanged: (index) {
+                          setState(() => _selectedIdx = index);
+                        },
+                      itemCount: displayKeys.length,
+                      itemBuilder: (context, index) {
                       final activity = activities[displayKeys[index]];
                       final type = activity['type'] ?? '';
                       final amount = activity['amount']?.toString() ?? '';
@@ -396,7 +399,7 @@ class _ActivitySectionState extends State<ActivitySection> {
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: TextStyle(
-                                                    fontSize: 26,
+                                                    fontSize: 32,
                                                     fontWeight: FontWeight.w900,
                                                     color:
                                                         widget.isDark
@@ -440,7 +443,7 @@ class _ActivitySectionState extends State<ActivitySection> {
                                                     return Text(
                                                       title,
                                                       style: TextStyle(
-                                                        fontSize: 16,
+                                                        fontSize: 18,
                                                         fontWeight:
                                                             FontWeight.w700,
                                                         color:
@@ -458,7 +461,7 @@ class _ActivitySectionState extends State<ActivitySection> {
                                               Text(
                                                 _activityDescription(activity),
                                                 style: TextStyle(
-                                                  fontSize: 14,
+                                                  fontSize: 15,
                                                   color:
                                                       widget.isDark
                                                           ? const Color(
@@ -541,6 +544,7 @@ class _ActivitySectionState extends State<ActivitySection> {
                       );
                     },
                   ),
+                ),
                 ),
                 if (keys.length > 1)
                   Positioned(
